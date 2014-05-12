@@ -1,48 +1,55 @@
 #!/usr/bin/env python
 import sys
 import argparse
+import datetime
 
 DEFAULT_TIME_FMT="%Y-%m-%dT%H:%M:%S%z"
 
+def extract_sep(line):
+    return line.split(None, 1)[1].decode("string-escape")
 
-def reader(f):
-    line = ''
-    headers = {}
-    it = iter(f)
-    while not line.startswith("#types"):
-        line = next(it).rstrip()
-        k,v = line[1:].split(None, 1)
-        headers[k] = v
+def find_output_indexes(fields, columns, negate):
+    if not columns:
+        return list(range(len(fields)))
 
-    sep = headers['separator'].decode("string-escape")
+    field_mapping = dict((field, idx) for (idx, field) in enumerate(fields))
 
-    for k,v in headers.items():
-        if sep in v:
-            headers[k] = v.split(sep)
-
-    headers['separator'] = sep
-    fields = headers['fields']
-    types = headers['types']
-    set_sep = headers['set_separator']
-
-    vectors = [field for field, type in zip(fields, types) if type.startswith("vector[")]
-
-    for row in it:
-        if row.startswith("#close"): break
-        parts = row.rstrip().split(sep)
-        rec = dict(zip(fields, parts))
-        for f in vectors:
-            rec[f] = rec[f].split(set_sep)
-        yield rec
-
-def bro_cut(columns=None, ofs="\t", negate=False, substtime=DEFAULT_TIME_FMT):
-    if columns is None:
-        columns = []
+    if not negate:
+        return [field_mapping.get(col) for col in columns]
     else:
-        columns = set(columns)
+        return [f for f in fields if f not in columns]
 
-    for rec in reader(sys.stdin):
-        print rec
+fromtimestamp = datetime.datetime.fromtimestamp
+def convert_time(ts, fmt):
+    ts = float(ts)
+    t = fromtimestamp(ts)
+    return t.strftime(fmt)
+
+
+def bro_cut(f, columns, substtime=False, ofs="\t", negate=False):
+    for line in f:
+        if line.startswith("#"):
+            if line.startswith("#separator"):
+                sep = extract_sep(line)
+            elif line.startswith("#fields"):
+                fields = line.split("\t")[1:]
+                out_indexes = find_output_indexes(fields, columns, negate)
+                out = [''] * len(out_indexes)
+            elif line.startswith("#types"):
+                types = line.split("\t")[1:]
+                time_fields = set(idx for (idx, t) in enumerate(types) if t == "time")
+            continue
+
+        parts = line.split()
+        for out_idx, idx in enumerate(out_indexes):
+            if idx != None:
+                if substtime and idx in time_fields:
+                    out[out_idx] = convert_time(parts[idx], substtime)
+                else:
+                    out[out_idx] = parts[idx]
+            else:
+                out[out_idx] = ''
+        print ofs.join(out)
 
 def main():
 
@@ -63,9 +70,7 @@ def main():
 
     args = parser.parse_args()
 
-    print args
-
-    bro_cut(**vars(args))
+    bro_cut(sys.stdin, **vars(args))
 
 
 if __name__ == "__main__":
