@@ -17,7 +17,7 @@ def find_output_indexes(fields, columns, negate):
     if not negate:
         return [field_mapping.get(col) for col in columns]
     else:
-        return [f for f in fields if f not in columns]
+        return [idx for (idx,f) in enumerate(fields) if f not in columns]
 
 fromtimestamp = datetime.datetime.fromtimestamp
 def convert_time(ts, fmt):
