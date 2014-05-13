@@ -19,14 +19,10 @@ def find_output_indexes(fields, columns, negate):
     else:
         return [idx for (idx,f) in enumerate(fields) if f not in columns]
 
-fromtimestamp = datetime.datetime.fromtimestamp
-def convert_time(ts, fmt):
-    ts = float(ts)
-    t = fromtimestamp(ts)
-    return t.strftime(fmt)
 
 
 def bro_cut(f, columns, substtime=False, ofs="\t", negate=False):
+    fromtimestamp = datetime.datetime.fromtimestamp
     for line in f:
         if line.startswith("#"):
             if line.startswith("#separator"):
@@ -44,7 +40,8 @@ def bro_cut(f, columns, substtime=False, ofs="\t", negate=False):
         for out_idx, idx in enumerate(out_indexes):
             if idx != None:
                 if substtime and idx in time_fields:
-                    out[out_idx] = convert_time(parts[idx], substtime)
+                    t = fromtimestamp(float(parts[idx])).strftime(substtime)
+                    out[out_idx] = t
                 else:
                     out[out_idx] = parts[idx]
             else:
