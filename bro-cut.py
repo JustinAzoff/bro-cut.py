@@ -6,7 +6,7 @@ import datetime
 DEFAULT_TIME_FMT="%Y-%m-%dT%H:%M:%S%z"
 
 def extract_sep(line):
-    value = line.rstrip().split(None, 1)[1]
+    value = line.split(None, 1)[1]
     return bytes(value.encode('ascii')).decode("unicode_escape")
 
 def find_output_indexes(fields, columns, negate):
@@ -25,6 +25,7 @@ def find_output_indexes(fields, columns, negate):
 def bro_cut(f, columns, substtime=False, ofs="\t", negate=False):
     fromtimestamp = datetime.datetime.fromtimestamp
     for line in f:
+        line = line.rstrip()
         if line.startswith("#"):
             if line.startswith("#separator"):
                 sep = extract_sep(line)
