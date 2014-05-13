@@ -6,7 +6,8 @@ import datetime
 DEFAULT_TIME_FMT="%Y-%m-%dT%H:%M:%S%z"
 
 def extract_sep(line):
-    return line.split(None, 1)[1].decode("string-escape")
+    value = line.split(None, 1)[1]
+    return bytes(value.encode('ascii')).decode("unicode_escape")
 
 def find_output_indexes(fields, columns, negate):
     if not columns:
@@ -46,7 +47,7 @@ def bro_cut(f, columns, substtime=False, ofs="\t", negate=False):
                     out[out_idx] = parts[idx]
             else:
                 out[out_idx] = ''
-        print ofs.join(out)
+        print (ofs.join(out))
 
 def main():
 
